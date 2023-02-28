@@ -26,10 +26,10 @@ one sig Player1,Player2 extends Player{}
 
 pred wellformed {
     all disj p1 : Player, p2 : Player | {
-        // Each player has the same number of pockets
+        -- Each player has the same number of pockets
         #{pock : Pocket | pock.side = p1} = #{pock : Pocket | pock.side = p2}
 
-        // Each player has exactly one mancala
+        -- Each player has exactly one mancala
         one pock1, pock2 : Pocket | {
             pock1.mancala = p1
             pock2.mancala = p2
@@ -37,23 +37,27 @@ pred wellformed {
     }
 
     all b: Board | {
+        -- It's someone's turn
         some b.turn
 
         all pock : Pocket | {
+            -- No negative marbles
             b.marbles[pock] >= 0
-            pock.next != pock
 
-            {pock.mancala = none} => { // if it is not a mancala
+            -- Set the right player sides and pocket opposites
+            {pock.mancala = none} => { // if not a mancala
                 {pock.next.mancala = none} => pock.opposite = pock.next.opposite.next else pock.opposite = pock.next.next
                 pock.next.side = pock.side
                 pock.opposite != pock
                 pock.opposite.opposite = pock
-            } else { // if it is a mancala
+            } else { // if a mancala
                 no pock.opposite
                 pock.mancala = pock.side
                 pock.next.side != pock.side
             }
 
+            -- Arrange all pockets in a cycle
+            pock.next != pock
             all other_pock: Pocket | {
                 reachable[other_pock, pock, next]
                 reachable[pock, pock, next]
@@ -65,12 +69,14 @@ pred wellformed {
 }
 
 pred init[b: Board] {
-    // Starts with player1
+    -- Start with player 1
     one p : Player1 | {
         b.turn = p
     }
-
+    -- Must have a next
     b.bnext != none
+
+    -- Place marbles
     b.hand = 0
     all pock : Pocket | {
         pock.mancala = none => b.marbles[pock] = 1 else b.marbles[pock] = 0
@@ -78,8 +84,13 @@ pred init[b: Board] {
 }
 
 pred final[b: Board] {
+    -- No next
     b.bnext = none
+
+    -- No marbles left in hand
     b.hand = 0
+
+    -- One player can no longer play
     one p : Player | {
         all pock : Pocket | {
             pock.side = p => {pock.mancala = none => b.marbles[pock] = 0}
@@ -142,13 +153,14 @@ pred move [pre: Board, post: Board] {
 
 
 pred traces {
-
+    -- Exists a first and last
     some disj first, last : Board | {
         init[first]
         final[last]
         reachable[last, first, bnext]
     }
 
+    -- Each board is move-able to its next board
     all b:Board | {
         some b.bnext => move[b, b.bnext]
     }
