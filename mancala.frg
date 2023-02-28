@@ -1,7 +1,7 @@
 #lang forge
 
 
-one sig Board {
+sig Board {
     // pockets: set Pocket,
     players: set Player,
     marbles: pfunc Pocket -> Int,
@@ -53,6 +53,7 @@ pred wellformed {
                     pock.opposite.opposite = pock
                 } else { // if it is a mancala
                     no pock.opposite
+                    pock.mancala = pock.side
                     pock.next.side != pock.side
                 }
 
