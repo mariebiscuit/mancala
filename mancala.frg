@@ -4,8 +4,10 @@
 one sig Board {
     // pockets: set Pocket,
     players: set Player,
-    marbles: pfunc Pocket -> Int  
-    hand: one Int
+    marbles: pfunc Pocket -> Int,
+    turn: one Player,  
+    hand: one Int,
+    bnext : lone Board
 }
 
 sig Pocket{
@@ -33,7 +35,7 @@ pred wellformed {
         one pock : Pocket | {
             pock.mancala = p2
         }
-        
+
         all b: Board | {
             all pock : Pocket | {
                 // pock in b.pockets
@@ -65,51 +67,103 @@ pred wellformed {
 
 }
 
-pred init {
+pred init[b: Board] {
     // all pock : Pocket | {
     //     pock.mancala = none => pock.marbles = 1 else pock.marbles = 0
     // }
-    all b: Board | {
-        b.hand = 0
+
+    // Starts with player1
+    one p : Player1 | {
+        b.turn = p
+    }
+
+    b.bnext != none
+    b.hand = 0
+    all pock : Pocket | {
+        // pock.mancala = none => pock.marbles = 1 else pock.marbles = 0
+        pock.mancala = none => b.marbles[pock] = 1 else b.marbles[pock] = 0
+    }
+}
+
+pred final[b: Board] {
+    b.bnext = none
+    b.hand = 0
+    one p : Player | {
         all pock : Pocket | {
-            // pock.mancala = none => pock.marbles = 1 else pock.marbles = 0
-            pock.mancala = none => b.marbles[pock] = 1 else b.marbles[pock] = 0
+            pock.side = p => {pock.mancala = none => b.marbles[pock] = 0}
         }
     }
 }
 
-pred move [pre: Board, post: Board, p: Player] {
+pred move [pre: Board, post: Board] {
 
+    -- GUARD: Ensure pockets are changed in sequence
+    one pock : Pocket | {
+        pre.marbles[pock.next] != post.marbles[pock.next]
+    } or {
+        pock.next.mancala = none
+        pre.marbles[pock.next.opposite] != post.marbles[pock.next.opposite]
+    }
+    
     one pock1: Pocket | {
         {pre.hand = 0} => { // chosen pocket
-        // needs player-specific constraint
-        // needs no other pocket changed constraint
-            pre.marbles[pock1] != 0
-            pock1.mancala = none
-            post.marbles[pock1] = 0
-            post.hand = pre.marbles[pock1]
+            -- GUARD (what needs to hold about the pre-state?)
+            pre.marbles[pock1] != 0 // has marbles
+            pock1.side = pre.turn // on player's side
+            pock1.mancala = none // not a mancala
+
+             -- ACTION (what does the post-state then look like?)
+            post.marbles[pock1] = 0 // all marbles removed
+            post.hand = pre.marbles[pock1] // marbles added to hand
             
         } else { // pocket gaining a marble
-            post.marbles[pock1] = pre.marbles[pock1] + 1
             post.hand = pre.hand - 1
-        // needs a mancala-checking constaint
-        // needs no other pocket changed constraint
+            {post.hand = 0} =>{ // have spent all marbles
+                pock1.mancala = none => { // finished in pocket
+                    post.turn != pre.turn  // change turn
+                    
+                    pre.marbles[pock1] = 0 => { // finished in empty pocket
+                        post.marbles[pock1] = 0
+                        post.marbles[pock1.opposite] = 0
+
+                        one man: Pocket | {
+                            man.mancala = pre.turn
+                            post.marbles[man] = pre.marbles[man] + pre.marbles[pock1.opposite] + 1
+                        }
+                    } else { // finished in pocket with marbles
+                        post.marbles[pock1] = pre.marbles[pock1] + 1
+                    }
+                } else post.turn = pre.turn // finished in mancala, keep turn
+
+            } else { // still have marbles in hand
+                post.marbles[pock1] = pre.marbles[pock1] + 1
+                post.turn = pre.turn
+            }
         }
+        
+        // no other pocket changed constraint
+        all other_pock: Pocket | {
+                pock1 != other_pock => pre.marbles[other_pock] = post.marbles[other_pock]
+            }
     }
 }
 
 
 pred traces {
-    
-    some p: Pocket | {
-        // track player?
-        move[p, ]
+
+    some disj first, last : Board | {
+        init[first]
+        final[last]
+        reachable[last, first, bnext]
     }
 
+    all b:Board | {
+        some b.bnext => move[b, b.bnext]
+    }
 }
 
 
-run{
+run {
     wellformed
-    // init
-} for exactly 2 Player, exactly 6 Pocket, exactly 1 Board
+    // traces
+} for exactly 2 Player, exactly 6 Pocket, exactly 2 Board// for {bnext is linear}
