@@ -8,9 +8,9 @@
 
 
 sig Pocket{
-    side : one Player
-    mancala : lone Player
-    marbles : one Int
+    side : one Player,
+    mancala : lone Player,
+    marbles : one Int,
     next : one Pocket
 }
 
@@ -32,12 +32,23 @@ pred wellformed {
         all pock : Pocket | {
             {pock.mancala = none} => pock.next.side = pock.side else pock.next.side != pock.side
             reachable[pock, pock, next]
+            pock.next != pock
+            pock.marbles >= 0
         }
     }
 
 }
 
+pred init {
+    all pock : Pocket | {
+        pock.mancala = none => pock.marbles = 1 else pock.marbles = 0
+    }
+}
+
+
+
 
 run{
     wellformed
-} for exactly 2 Player, 4 Pocket for {next is linear}
+    init
+} for exactly 2 Player, exactly 4 Pocket
