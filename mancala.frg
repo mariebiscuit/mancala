@@ -2,10 +2,12 @@
 
 
 sig Board {
-    players: set Player,
+    // players: set Player,
     marbles: pfunc Pocket -> Int,
+
     turn: one Player,  
     hand: one Int,
+    
     bnext : lone Board
 }
 
@@ -24,41 +26,39 @@ one sig Player1,Player2 extends Player{}
 
 pred wellformed {
     all disj p1 : Player, p2 : Player | {
+        // Each player has the same number of pockets
         #{pock : Pocket | pock.side = p1} = #{pock : Pocket | pock.side = p2}
 
         // Each player has exactly one mancala
-        one pock : Pocket | {
-            pock.mancala = p1
+        one pock1, pock2 : Pocket | {
+            pock1.mancala = p1
+            pock2.mancala = p2
         }
-        one pock : Pocket | {
-            pock.mancala = p2
-        }
+    }
 
-        all b: Board | {
-            all pock : Pocket | {
-                b.marbles[pock] >= 0
-                pock.next != pock
+    all b: Board | {
+        some b.turn
 
-                p1 in b.players
-                p2 in b.players
+        all pock : Pocket | {
+            b.marbles[pock] >= 0
+            pock.next != pock
 
-                {pock.mancala = none} => { // if it is not a mancala
-                    {pock.next.mancala = none} => pock.opposite = pock.next.opposite.next else pock.opposite = pock.next.next
-                    pock.next.side = pock.side
-                    pock.opposite != pock
-                    pock.opposite.opposite = pock
-                } else { // if it is a mancala
-                    no pock.opposite
-                    pock.mancala = pock.side
-                    pock.next.side != pock.side
-                }
-
-                all other_pock: Pocket | {
-                    reachable[other_pock, pock, next]
-                    reachable[pock, pock, next]
-                }
-
+            {pock.mancala = none} => { // if it is not a mancala
+                {pock.next.mancala = none} => pock.opposite = pock.next.opposite.next else pock.opposite = pock.next.next
+                pock.next.side = pock.side
+                pock.opposite != pock
+                pock.opposite.opposite = pock
+            } else { // if it is a mancala
+                no pock.opposite
+                pock.mancala = pock.side
+                pock.next.side != pock.side
             }
+
+            all other_pock: Pocket | {
+                reachable[other_pock, pock, next]
+                reachable[pock, pock, next]
+            }
+
         }
     }
 
