@@ -25,12 +25,15 @@ one sig Player1,Player2 extends Player{}
 pred wellformed {
     all disj p1 : Player, p2 : Player | {
         #{pock : Pocket | pock.side = p1} = #{pock : Pocket | pock.side = p2}
+
+        // Each player has exactly one mancala
         one pock : Pocket | {
             pock.mancala = p1
         }
         one pock : Pocket | {
             pock.mancala = p2
         }
+        
         all b: Board | {
             all pock : Pocket | {
                 // pock in b.pockets
