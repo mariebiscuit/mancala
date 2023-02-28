@@ -2,7 +2,6 @@
 
 
 sig Board {
-    // pockets: set Pocket,
     players: set Player,
     marbles: pfunc Pocket -> Int,
     turn: one Player,  
@@ -13,7 +12,6 @@ sig Board {
 sig Pocket{
     side : one Player,
     mancala : lone Player,
-    // marbles : one Int,
     next : one Pocket,
     opposite: lone Pocket
 }
@@ -38,9 +36,7 @@ pred wellformed {
 
         all b: Board | {
             all pock : Pocket | {
-                // pock in b.pockets
                 b.marbles[pock] >= 0
-                // pock.marbles >= 0
                 pock.next != pock
 
                 p1 in b.players
@@ -69,10 +65,6 @@ pred wellformed {
 }
 
 pred init[b: Board] {
-    // all pock : Pocket | {
-    //     pock.mancala = none => pock.marbles = 1 else pock.marbles = 0
-    // }
-
     // Starts with player1
     one p : Player1 | {
         b.turn = p
@@ -81,7 +73,6 @@ pred init[b: Board] {
     b.bnext != none
     b.hand = 0
     all pock : Pocket | {
-        // pock.mancala = none => pock.marbles = 1 else pock.marbles = 0
         pock.mancala = none => b.marbles[pock] = 1 else b.marbles[pock] = 0
     }
 }
@@ -167,4 +158,4 @@ pred traces {
 run {
     wellformed
     // traces
-} for exactly 2 Player, exactly 6 Pocket, exactly 2 Board// for {bnext is linear}
+} for exactly 2 Player, exactly 6 Pocket, exactly 3 Board for {bnext is linear}
