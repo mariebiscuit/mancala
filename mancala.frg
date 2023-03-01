@@ -74,6 +74,11 @@ pred init[b: Board] {
     one p : Player1 | {
         b.turn = p
     }
+
+    -- no Prev
+    no bo: Board | {
+        bo.bnext = b
+    }
     -- Must have a next
     b.bnext != none
     b.lastPocket = none
@@ -121,7 +126,7 @@ pred move [pre: Board, post: Board] {
             post.marbles[pock1] = 0 // all marbles removed
             post.hand = pre.marbles[pock1] // marbles added to hand
             post.lastPocket = pock1
-            // pre.turn = post.turn // TODO: for some reason unsat when this is active
+            post.turn = pre.turn // TODO: for some reason unsat when this is active
             
         } 
         else { // pocket gaining a marble
@@ -146,7 +151,8 @@ pred move [pre: Board, post: Board] {
 
                 } else { // finished in mancala
                     post.marbles[pock1] = add[pre.marbles[pock1], 1] // add to mancala
-                    post.turn = pre.turn  // keep turn
+                    post.turn = pre.turn  
+                    // keep turn
                 }
 
             } else { // still have marbles in hand
@@ -169,7 +175,7 @@ pred traces {
     -- Exists a first and last
     some disj first, last : Board | {
         init[first]
-        final[last]
+        // final[last]
         reachable[last, first, bnext]
     }
 
@@ -183,4 +189,4 @@ pred traces {
 run {
     wellformed
     traces
-} for exactly 2 Player, exactly 6 Pocket, 8 Board for {bnext is linear}
+} for exactly 2 Player, exactly 6 Pocket, exactly 7 Board, 5 Int for {bnext is linear}
