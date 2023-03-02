@@ -1,8 +1,7 @@
-#lang forge
+#lang forge/bsl
 
 
 sig Board {
-    // players: set Player,
     marbles: pfunc Pocket -> Int,
 
     turn: one Player,  
@@ -70,7 +69,7 @@ pred wellformed {
 
 }
 
-pred init[b: Board] {
+pred init[b: Board, i: Int] {
     -- Start with player 1
     one p : Player1 | {
         b.turn = p
@@ -87,7 +86,7 @@ pred init[b: Board] {
     -- Place marbles
     b.hand = 0
     all pock : Pocket | {
-        pock.mancala = none => b.marbles[pock] = 1 else b.marbles[pock] = 0
+        pock.mancala = none => b.marbles[pock] = i else b.marbles[pock] = 0
     }
 }
 
@@ -168,9 +167,7 @@ pred move [pre: Board, post: Board] {
                 pock.mancala = none => { // finished in pocket
                     post.turn != pre.turn  // change turn
                     
-                    {pre.marbles[pock] = 0 
-                    // and pock.side=pre.turn
-                    } => { // finished in own side's empty pocket
+                    {pre.marbles[pock] = 0 and pock.side=pre.turn} => { // finished in own side's empty pocket
                         post.marbles[pock.opposite] = 0
                         
                         one man: Pocket | {
@@ -182,7 +179,8 @@ pred move [pre: Board, post: Board] {
                                 {otherP != pock.opposite and otherP != man} => pre.marbles[otherP] = post.marbles[otherP]
                             }
                         }
-                    } else { // finished in pocket with marbles
+                    } else {
+                         // finished in pocket with marbles
                         post.marbles[pock] = add[pre.marbles[pock], 1]
                         otherPockUnchanged[pock, pre, post]
                     }
@@ -190,10 +188,14 @@ pred move [pre: Board, post: Board] {
                 } 
                 else { // finished in mancala
                     post.marbles[pock] = add[pre.marbles[pock], 1] // add to mancala
-                    post.turn = pre.turn // keep turn
                     otherPockUnchanged[pock, pre, post]
-                }
 
+                    pock.side = pre.turn => {
+                        post.turn = pre.turn // keep turn if own mancala
+                    } else {
+                        post.turn != pre.turn // change turn if not
+                    }
+                }
             } else { // still have marbles in hand
                 post.marbles[pock] = add[pre.marbles[pock], 1]
                 post.turn = pre.turn
@@ -205,10 +207,10 @@ pred move [pre: Board, post: Board] {
     }
 }
 
-pred traces {
+pred traces[i: Int] {
     -- Exists a first and last
     some disj first, last : Board | {
-        init[first]
+        init[first, i]
         final[last]
         reachable[last, first, bnext]
     }
@@ -222,5 +224,5 @@ pred traces {
 
 run {
     wellformed
-    traces
-} for exactly 2 Player, exactly 4 Pocket, exactly 8 Board for {bnext is linear}
+    traces[2]
+} for exactly 2 Player, exactly 4 Pocket, 20 Board for {bnext is linear}
