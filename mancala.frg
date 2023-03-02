@@ -99,7 +99,7 @@ pred final[b: Board] {
     b.hand = 0
 
     -- One player can no longer play
-    some p : Player | {
+    all p : Player | {
         all pock : Pocket | {
             {pock.side = p and pock.mancala = none} => b.marbles[pock] = 0
         }
@@ -108,9 +108,7 @@ pred final[b: Board] {
 
 pred playerNoMarbles[b: Board]{
     all pock: Pocket | {
-            pock.side = b.turn
-            pock.mancala = none
-            b.marbles[pock] = 0
+            {pock.side = b.turn and pock.mancala = none} => b.marbles[pock] = 0
         }
 }
 
@@ -159,7 +157,8 @@ pred move [pre: Board, post: Board] {
                 otherPockUnchanged[usedPock, pre, post]
             }
         } 
-    } else {
+    } 
+    else {
         post.hand = subtract[pre.hand, 1] // Changed from pre.hand - 1
 
         one pock: Pocket | {
@@ -169,9 +168,11 @@ pred move [pre: Board, post: Board] {
                 pock.mancala = none => { // finished in pocket
                     post.turn != pre.turn  // change turn
                     
-                    pre.marbles[pock] = 0 => { // finished in empty pocket
+                    {pre.marbles[pock] = 0 
+                    // and pock.side=pre.turn
+                    } => { // finished in own side's empty pocket
                         post.marbles[pock.opposite] = 0
-
+                        
                         one man: Pocket | {
                             man.mancala = pre.turn
                             post.marbles[man] = add[pre.marbles[man], pre.marbles[pock.opposite], 1]
@@ -186,7 +187,8 @@ pred move [pre: Board, post: Board] {
                         otherPockUnchanged[pock, pre, post]
                     }
 
-                } else { // finished in mancala
+                } 
+                else { // finished in mancala
                     post.marbles[pock] = add[pre.marbles[pock], 1] // add to mancala
                     post.turn = pre.turn // keep turn
                     otherPockUnchanged[pock, pre, post]
@@ -202,47 +204,6 @@ pred move [pre: Board, post: Board] {
         }
     }
 }
-
-
---------------
-        // post.hand = subtract[pre.hand, 1] // Changed from pre.hand - 1
-        // {pre.hand = 1} => {
-        //     one pock: Pocket | {
-        //         pock = pre.lastPocket.next
-        //         pock.mancala = none => { // finished in pocket
-        //             post.turn != pre.turn  // change turn
-                    
-        //             pre.marbles[pock] = 0 => { // finished in empty pocket
-
-        //                 post.marbles[pock.opposite] = 0
-
-        //                 one man: Pocket | {
-        //                     man.mancala = pre.turn
-        //                     post.marbles[man] = add[pre.marbles[man], pre.marbles[pock.opposite], 1]
-
-        //                     -- Other pocks unchanged, but two pocks change
-        //                     all otherP: Pocket | {
-        //                         {otherP != pock.opposite and otherP != man} => pre.marbles[otherP] = post.marbles[otherP]
-        //                     }
-        //                 }
-
-
-        //             } else { // finished in pocket with marbles
-        //                 post.marbles[pock] = add[pre.marbles[pock], 1]
-        //                 otherPockUnchanged[pock, pre, post]
-        //             }
-
-        //         } else { // finished in mancala
-        //             post.marbles[pock] = add[pre.marbles[pock], 1] // add to mancala
-        //             post.turn = pre.turn  // keep turn
-        //             otherPockUnchanged[pock, pre, post]
-        //         }
-        //     }
-        // } else => {
-        //     post.marbles[pock] = add[pre.marbles[pock], 1]
-        //     post.turn = pre.turn
-        //     post.lastPocket = pock
-        // }
 
 pred traces {
     -- Exists a first and last
@@ -262,4 +223,4 @@ pred traces {
 run {
     wellformed
     traces
-} for exactly 2 Player, exactly 6 Pocket, exactly 11 Board for {bnext is linear}
+} for exactly 2 Player, exactly 4 Pocket, exactly 8 Board for {bnext is linear}
