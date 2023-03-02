@@ -3,12 +3,11 @@
 
 sig Board {
     marbles: pfunc Pocket -> Int,
-
     turn: one Player,  
     hand: one Int,
     lastPocket: lone Pocket,
-
     bnext : lone Board
+
 }
 
 sig Pocket{
@@ -126,15 +125,6 @@ pred otherPockUnchanged[p: Pocket, pre: Board, post:Board]{
     }
 }
 
-pred noChange[pre: Board, post: Board]{
-    post.turn = pre.turn
-    post.hand = pre.hand
-    -- No pockets change
-    all p: Pocket | {
-        pre.marbles[p] = post.marbles[p]
-    }
-}
-
 pred move [pre: Board, post: Board] {
 
     {pre.hand = 0} => {
@@ -224,5 +214,5 @@ pred traces[i: Int] {
 
 run {
     wellformed
-    traces[2]
-} for exactly 2 Player, exactly 4 Pocket, 20 Board for {bnext is linear}
+    traces[1]
+} for exactly 2 Player, exactly 4 Pocket, 7 Board for {bnext is linear}
