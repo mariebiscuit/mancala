@@ -105,37 +105,58 @@ pred final[b: Board] {
     }
 }
 
+pred playerNoMarbles[b: Board]{
+    all pock: Pocket | {
+            pock.side = b.turn
+            pock.mancala = none
+            b.marbles[pock] = 0
+        }
+}
 
+pred changeTurnKeepBoard[pre: Board, post: Board]{
+    post.turn != pre.turn
+    post.hand = pre.hand
+    -- No pockets change
+    all p: Pocket | {
+        pre.marbles[p] = post.marbles[p]
+    }
+}
+
+pred noChange[pre: Board, post: Board]{
+    post.turn = pre.turn
+    post.hand = pre.hand
+    -- No pockets change
+    all p: Pocket | {
+        pre.marbles[p] = post.marbles[p]
+    }
+}
 
 pred move [pre: Board, post: Board] {
 
     {pre.hand = 0} => {
-        some pock: Pocket | {
-            -- GUARD
-            pre.marbles[pock] != 0 // has marbles
-            pock.side = pre.turn // on player's side
-            pock.mancala = none // not a mancala
-        } => {
-            -- ACTION (what does the post-state then look like?)
-            post.marbles[pock] = 0 // all marbles removed
-            post.hand = pre.marbles[pock] // marbles added to hand
-            post.lastPocket = pock
-            post.turn = pre.turn
+        playerNoMarbles[pre] => {
+            changeTurnKeepBoard[pre, post]
+            } else {
+            some usedPock : Pocket | {
+                -- GUARD
+                usedPock.side = pre.turn // on player's side
+                usedPock.mancala = none // not a mancala
+                pre.marbles[usedPock] != 0
+                
+                -- ACTION
+                post.marbles[usedPock] = 0 // all marbles removed
+                post.hand = pre.marbles[usedPock] // marbles added to hand
+                post.lastPocket = usedPock
+                post.turn = pre.turn
 
-            -- No other pockets change
-            all otherPock: Pocket | {
-                pock != otherPock => pre.marbles[otherPock] = post.marbles[otherPock]
+                -- No other pockets change
+                all otherPock: Pocket | {
+                    usedPock != otherPock => pre.marbles[otherPock] = post.marbles[otherPock]
+                }
             }
-        } else {
-            post.turn != pre.turn
-            post.hand = pre.hand
-            -- No pockets change
-            all otherPock: Pocket | {
-                pre.marbles[otherPock] = post.marbles[otherPock]
-            }
-        }
+        } 
     } else {
-        post.hand = subtract[pre.hand, 1] // Changed from pre.hand - 1
+        // post.hand = subtract[pre.hand, 1] // Changed from pre.hand - 1
 
         one pock: Pocket | {
             pock = pre.lastPocket.next
@@ -174,60 +195,6 @@ pred move [pre: Board, post: Board] {
             }
         }
     }
-
-    // one pock1: Pocket | {
-    //     {pre.hand = 0} => { // chosen pocket
-    //         -- GUARD (what needs to hold about the pre-state?)
-    //         pre.marbles[pock1] != 0 // has marbles
-    //         pock1.side = pre.turn // on player's side
-    //         pock1.mancala = none // not a mancala
-
-    //         -- ACTION (what does the post-state then look like?)
-    //         post.marbles[pock1] = 0 // all marbles removed
-    //         post.hand = pre.marbles[pock1] // marbles added to hand
-    //         post.lastPocket = pock1
-    //         post.turn = pre.turn // TODO: for some reason unsat when this is active
-            
-    //     } 
-    //     else { // pocket gaining a marble
-    //         pock1 = pre.lastPocket.next
-    //         post.hand = subtract[pre.hand, 1] // Changed from pre.hand - 1
-
-    //         {post.hand = 0} =>{ // have spent all marbles
-    //             pock1.mancala = none => { // finished in pocket
-    //                 post.turn != pre.turn  // change turn
-                    
-    //                 pre.marbles[pock1] = 0 => { // finished in empty pocket
-    //                     post.marbles[pock1] = 0
-    //                     post.marbles[pock1.opposite] = 0
-
-    //                     one man: Pocket | {
-    //                         man.mancala = pre.turn
-    //                         post.marbles[man] = add[pre.marbles[man], pre.marbles[pock1.opposite], 1]
-    //                     }
-    //                 } else { // finished in pocket with marbles
-    //                     post.marbles[pock1] = add[pre.marbles[pock1], 1]
-    //                 }
-
-    //             } else { // finished in mancala
-    //                 post.marbles[pock1] = add[pre.marbles[pock1], 1] // add to mancala
-    //                 post.turn = pre.turn  
-    //                 // keep turn
-    //             }
-
-    //         } else { // still have marbles in hand
-    //             post.marbles[pock1] = add[pre.marbles[pock1], 1]
-    //             post.turn = pre.turn
-    //             post.lastPocket = pock1
-        
-    //         }
-    //     }
-        
-    //     // no other pocket changed constraint
-    //     all other_pock: Pocket | {
-    //         pock1 != other_pock => pre.marbles[other_pock] = post.marbles[other_pock]
-    //     }
-    // }
 }
 
 
@@ -235,7 +202,7 @@ pred traces {
     -- Exists a first and last
     some disj first, last : Board | {
         init[first]
-        final[last]
+        // final[last]
         reachable[last, first, bnext]
     }
 
@@ -249,4 +216,4 @@ pred traces {
 run {
     wellformed
     traces
-} for exactly 2 Player, exactly 6 Pocket, exactly 7 Board for {bnext is linear}
+} for exactly 2 Player, exactly 6 Pocket, exactly 8 Board for {bnext is linear}
