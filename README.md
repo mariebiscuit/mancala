@@ -53,17 +53,18 @@ Our model also has the following `preds`:
     - Pockets that are not mancalas have the correct opposites;
     - There are non-negative number of marbles in any holding structure (in hand or pockets);.
     - It is someone's turn in every game state.
-- `init`: Sets up the starting state:
+- `init`: Sets up the starting state, with Integer parameter `n`
     - Player 1 starts first;
     - There are no marbles in hand or in any of the Mancalas;
-    - All non-mancala pockets have the same number of marbles.
+    - All non-mancala pockets have the same `n` number of marbles.
 - `final`: Sets up the endgame state
     - All marbles are in mancalas.
 - `playerNoMarbles`: Helper predicate that for whether for a certain `Board` state, the player with the turn has no more marbles in pockets,
 - `changeTurnKeepBoard`: Helper predicate for whether a given `pre` and `post` state have no difference except that the turn has changed.
 - `otherPockUnchanged`: Helper predicate for whether, except for one specified `Pocket`, all other pockets are unchanged between `pre` and `post` Boards
 - `move`: Predicate for a valid move between `pre` and `post` `Board` states. Most of our game logic lies in this predicate. It is a valid move if it is one of the events described above in the `bnext` field of the `Board` sig.
-- `traces`: Predicate for a valid flow of game from start to end: that there is a starting state, ending state, and  every state in between is connected by a valid `move` to their next state.
+- `traces`: Predicate for a valid flow of game from start to end: that there is a starting state, ending state, and  every state in between is connected by a valid `move` to their next state. 
+    - Takes an integer parameter `n` to pass into `init`
 
 
 ### Remarks on Design Choices
@@ -76,4 +77,20 @@ Our model also has the following `preds`:
     - However, this also means that depending on the number of `Boards` indicated in the `run` statement, after both players run out of marbles Sterling will generate "padding" `Boards` where nothing happens except the `turn` changing, until the number of `Boards` are met.
     - For this reason, our model can investigae the lower bound of `Board`s required, but not the upper bound.
 
-### Interpreting The Model
+### Running The Model
+This is an example to run a game where each pocket starts with 1 marble, there are 2 pockets and 2 Mancalas (= 4 `Pocket`), and 7 `Board`s are allowed as maximum. 
+
+```
+run {
+    wellformed
+    traces[1]
+} for exactly 2 Player, exactly 4 Pocket, 7 Board for {bnext is linear}
+```
+- The `Int` parameter in `traces` indicates the number of marbles each pocket will start with.
+- The number of `Pocket`s must be even to satisfy the constraint that each player has the same number of pockets. 
+- `Board` must be sufficiently large relative to the number of pockets and number of marbles for there to be a final state (where both players run out of marbles). Since `traces` requires a final state, the model will return `unsat` if there are insufficient `Board`.
+
+### Running The Model
+We use the default Sterling visualizer. It is easiest to view by `Add Time Projection` > `Board`, and toggle between `Board`s to see where marbles are taken and transferred. One can trace the correct flow of marbles by toggling next/previous between Boards. 
+- The visualizer does not show the `turn` and `hand` fields of `Board`, which can be accessed through the evaluator. It may be necessary to check these values to verify that it is the correct behavior.
+- Generally, the pattern will be that one Pocket will be zero'd out and the next `n` successive pockets will be incremented by 1. In a case where a pocket out-of-order suddenly gains a lot of marbles, this pocket should be the mancala: this event means the next pocket was empty, so that opposite pocket and marble-in-hand are transfered to the player's mancala.
