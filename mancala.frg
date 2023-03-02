@@ -40,6 +40,7 @@ pred wellformed {
     all b: Board | {
         -- It's someone's turn
         some b.turn
+        b.hand >= 0
 
         all pock : Pocket | {
             -- No negative marbles
@@ -98,9 +99,9 @@ pred final[b: Board] {
     b.hand = 0
 
     -- One player can no longer play
-    one p : Player | {
+    some p : Player | {
         all pock : Pocket | {
-            pock.side = p => {pock.mancala = none => b.marbles[pock] = 0}
+            {pock.side = p and pock.mancala = none} => b.marbles[pock] = 0
         }
     }
 }
@@ -122,6 +123,12 @@ pred changeTurnKeepBoard[pre: Board, post: Board]{
     }
 }
 
+pred otherPockUnchanged[p: Pocket, pre: Board, post:Board]{
+    all otherP: Pocket | {
+        p != otherP => pre.marbles[otherP] = post.marbles[otherP]
+    }
+}
+
 pred noChange[pre: Board, post: Board]{
     post.turn = pre.turn
     post.hand = pre.hand
@@ -136,7 +143,7 @@ pred move [pre: Board, post: Board] {
     {pre.hand = 0} => {
         playerNoMarbles[pre] => {
             changeTurnKeepBoard[pre, post]
-            } else {
+        } else {
             some usedPock : Pocket | {
                 -- GUARD
                 usedPock.side = pre.turn // on player's side
@@ -149,14 +156,11 @@ pred move [pre: Board, post: Board] {
                 post.lastPocket = usedPock
                 post.turn = pre.turn
 
-                -- No other pockets change
-                all otherPock: Pocket | {
-                    usedPock != otherPock => pre.marbles[otherPock] = post.marbles[otherPock]
-                }
+                otherPockUnchanged[usedPock, pre, post]
             }
         } 
     } else {
-        // post.hand = subtract[pre.hand, 1] // Changed from pre.hand - 1
+        post.hand = subtract[pre.hand, 1] // Changed from pre.hand - 1
 
         one pock: Pocket | {
             pock = pre.lastPocket.next
@@ -166,43 +170,85 @@ pred move [pre: Board, post: Board] {
                     post.turn != pre.turn  // change turn
                     
                     pre.marbles[pock] = 0 => { // finished in empty pocket
-                        post.marbles[pock] = 0
                         post.marbles[pock.opposite] = 0
 
                         one man: Pocket | {
                             man.mancala = pre.turn
                             post.marbles[man] = add[pre.marbles[man], pre.marbles[pock.opposite], 1]
+                            
+                            -- Other pocks unchanged, but two pocks change
+                            all otherP: Pocket | {
+                                {otherP != pock.opposite and otherP != man} => pre.marbles[otherP] = post.marbles[otherP]
+                            }
                         }
                     } else { // finished in pocket with marbles
                         post.marbles[pock] = add[pre.marbles[pock], 1]
+                        otherPockUnchanged[pock, pre, post]
                     }
 
                 } else { // finished in mancala
                     post.marbles[pock] = add[pre.marbles[pock], 1] // add to mancala
-                    post.turn = pre.turn  
-                    // keep turn
+                    post.turn = pre.turn // keep turn
+                    otherPockUnchanged[pock, pre, post]
                 }
 
             } else { // still have marbles in hand
                 post.marbles[pock] = add[pre.marbles[pock], 1]
                 post.turn = pre.turn
                 post.lastPocket = pock
+                otherPockUnchanged[pock, pre, post]
         
-            }
-
-            all otherPock: Pocket | {
-                pock != otherPock => pre.marbles[otherPock] = post.marbles[otherPock]
             }
         }
     }
 }
 
 
+--------------
+        // post.hand = subtract[pre.hand, 1] // Changed from pre.hand - 1
+        // {pre.hand = 1} => {
+        //     one pock: Pocket | {
+        //         pock = pre.lastPocket.next
+        //         pock.mancala = none => { // finished in pocket
+        //             post.turn != pre.turn  // change turn
+                    
+        //             pre.marbles[pock] = 0 => { // finished in empty pocket
+
+        //                 post.marbles[pock.opposite] = 0
+
+        //                 one man: Pocket | {
+        //                     man.mancala = pre.turn
+        //                     post.marbles[man] = add[pre.marbles[man], pre.marbles[pock.opposite], 1]
+
+        //                     -- Other pocks unchanged, but two pocks change
+        //                     all otherP: Pocket | {
+        //                         {otherP != pock.opposite and otherP != man} => pre.marbles[otherP] = post.marbles[otherP]
+        //                     }
+        //                 }
+
+
+        //             } else { // finished in pocket with marbles
+        //                 post.marbles[pock] = add[pre.marbles[pock], 1]
+        //                 otherPockUnchanged[pock, pre, post]
+        //             }
+
+        //         } else { // finished in mancala
+        //             post.marbles[pock] = add[pre.marbles[pock], 1] // add to mancala
+        //             post.turn = pre.turn  // keep turn
+        //             otherPockUnchanged[pock, pre, post]
+        //         }
+        //     }
+        // } else => {
+        //     post.marbles[pock] = add[pre.marbles[pock], 1]
+        //     post.turn = pre.turn
+        //     post.lastPocket = pock
+        // }
+
 pred traces {
     -- Exists a first and last
     some disj first, last : Board | {
         init[first]
-        // final[last]
+        final[last]
         reachable[last, first, bnext]
     }
 
@@ -216,4 +262,4 @@ pred traces {
 run {
     wellformed
     traces
-} for exactly 2 Player, exactly 6 Pocket, exactly 8 Board for {bnext is linear}
+} for exactly 2 Player, exactly 6 Pocket, exactly 11 Board for {bnext is linear}
