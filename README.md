@@ -16,4 +16,5 @@ In addition to the README be sure to document your model and test files.
 2. Going clockwise, the player drops one marble into each slot, where "slot" includes both pockets and Mancalas.
 3. Depending on where the player drops their last marble, if the last marble...
     - Ends in a pocket with marbles: The next player takes their turn.
-    - Ends in their own mancala:
+    - Ends in their own mancala: The player keeps their turn and returns to step 1.
+    - Ends in their own pocket that has no marbles: The player takes all the marbles from this pocket (i.e. the one just added) and the opposite pocket, and adds all the marbles to their mancala.
