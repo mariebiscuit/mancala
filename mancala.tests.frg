@@ -6,7 +6,7 @@ open "mancala.frg"
 
 test suite for wellformed {
     example isWellformed is wellformed for {
-        Player = Player1 + Player2
+        Player = `Player1 + `Player2
         Player1 = `Player1
         Player2 = `Player2
         Board = `board
@@ -16,7 +16,7 @@ test suite for wellformed {
                 `p3 -> `Player1 +
                 `p4 -> `Player2 +
                 `p5 -> `Player2 +
-                `p6 -> `Player2 +
+                `p6 -> `Player2
         next = `p1 -> `p2 +
                 `p2 -> `p3 +
                 `p3 -> `p4 +

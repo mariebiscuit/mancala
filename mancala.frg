@@ -1,8 +1,7 @@
-#lang forge
+#lang forge/bsl
 
 
 sig Board {
-    // players: set Player,
     marbles: pfunc Pocket -> Int,
 
     turn: one Player,  
@@ -168,9 +167,7 @@ pred move [pre: Board, post: Board] {
                 pock.mancala = none => { // finished in pocket
                     post.turn != pre.turn  // change turn
                     
-                    {pre.marbles[pock] = 0 
-                    // and pock.side=pre.turn
-                    } => { // finished in own side's empty pocket
+                    {pre.marbles[pock] = 0 and pock.side=pre.turn} => { // finished in own side's empty pocket
                         post.marbles[pock.opposite] = 0
                         
                         one man: Pocket | {
@@ -193,7 +190,6 @@ pred move [pre: Board, post: Board] {
                     post.turn = pre.turn // keep turn
                     otherPockUnchanged[pock, pre, post]
                 }
-
             } else { // still have marbles in hand
                 post.marbles[pock] = add[pre.marbles[pock], 1]
                 post.turn = pre.turn
@@ -223,4 +219,4 @@ pred traces {
 run {
     wellformed
     traces
-} for exactly 2 Player, exactly 4 Pocket, exactly 8 Board for {bnext is linear}
+} for exactly 2 Player, exactly 6 Pocket, 7 Board for {bnext is linear}
