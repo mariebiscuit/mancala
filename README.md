@@ -1,12 +1,5 @@
-
-For this project, we ask that you submit a README that explains your implementation. At a minimum, you should address each of the following points:
-
-What are you trying to model? Include a brief description that would give someone unfamiliar with the topic a basic understanding of your goal.
-Give an overview of your model design choices, what checks or run statements you wrote, and what we should expect to see from an instance produced by the Sterling visualizer. How should we look at and interpret an instance created by your spec? Did you create a custom visualization, or did you use the default?
-At a high level, what do each of your sigs and preds represent in the context of the model? Justify the purpose for their existence and how they fit together.
-In addition to the README be sure to document your model and test files.
-
 # Curiosity Modeling: Mancala
+Alyssa Loo & Mathew Boranian
 ## About the Game
 ![](https://www.thesprucecrafts.com/thmb/yA6Lp0LcwqefQrJiQtNNVZTwIco=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/mancala-411837_hero_2888-8bef0fd76a324c86b61325556710d89f.jpg)
 
@@ -45,34 +38,41 @@ Our model has the following `sigs` and fields:
 - `Player`: An abstract sig that is either `Player1` or `Player2` to represent the two players in play.
 
 ### Preds
-Our model also has the following `preds`:
-- `wellformed`: Sets up th sensible physical stucture of the game 
+**Game-modeling Predicates**: Predicates that constrain the structure of the game
+- `wellformedPockets`: Sets up the correct physical structure of the Mancala board
     - All players have one mancala and have an equal number of pockets;
     - All pockets are connected to each other in a cycle;
     - A consecutive half of pockets belongs to one player and the other consecutive half belongs to another;
     - Pockets that are not mancalas have the correct opposites;
-    - There are non-negative number of marbles in any holding structure (in hand or pockets);.
-    - It is someone's turn in every game state.
+- `wellformedBoards`: Defines physically sensible values for each Board state: mainly that all marbles counts are non-negative.
 - `init`: Sets up the starting state, with Integer parameter `n`
     - Player 1 starts first;
     - There are no marbles in hand or in any of the Mancalas;
     - All non-mancala pockets have the same `n` number of marbles.
-- `final`: Sets up the endgame state
-    - All marbles are in mancalas.
+- `final`: Defines the endgame state as that all marbles are in mancalas.
+- `move`: Predicate for a valid move between `pre` and `post` `Board` states. Most of our game logic lies in this predicate. It is a valid move if it is one of the events described above in the `bnext` field of the `Board` sig.
+- `trace`: With some `init` board, the sequence of boards is connected by valid moves
+
+#### **Investigative Predicates**: Predicates to use in TestExpects to test satisfiability of certain properties
+- `reachableEnd` There exists some board that is a `final` board.
+- `stealingHappened` At some transition between boards, a "stealing" event happened (i.e. a player landed in their own empty pocket and cleared out the opposite pocket into their mancala.
+
+#### **Helper Predicates**
 - `playerNoMarbles`: Helper predicate that for whether for a certain `Board` state, the player with the turn has no more marbles in pockets,
 - `changeTurnKeepBoard`: Helper predicate for whether a given `pre` and `post` state have no difference except that the turn has changed.
 - `otherPockUnchanged`: Helper predicate for whether, except for one specified `Pocket`, all other pockets are unchanged between `pre` and `post` Boards
-- `move`: Predicate for a valid move between `pre` and `post` `Board` states. Most of our game logic lies in this predicate. It is a valid move if it is one of the events described above in the `bnext` field of the `Board` sig.
-- `traces`: Predicate for a valid flow of game from start to end: that there is a starting state, ending state, and  every state in between is connected by a valid `move` to their next state. 
-    - Takes an integer parameter `n` to pass into `init`
+
+#### **Convenience Predicates**
+- `wellformed`: Combines `wellformedPockets` and `wellformedBoards`
+- `fullGame[i]`: Combines `init[i]` and `reachableEnd` (i.e., a game start to end)
 
 
 ### Remarks on Design Choices
-1. Events: We define each atomic event in our sequence of states as a change in some property of the game state, rather than using the start and end of player turns to define an event. 
+1. **Events**: We define each atomic event in our sequence of states as a change in some property of the game state, rather than using the start and end of player turns to define an event. 
     - We considered using the latter, but this would involve intermediately computing all the changes and making the accumulated updates to the Board. This was substantially more difficult since turns are of variable length and may involve multiple conditionals depending on the number of marbles the player picks up, and where they end. 
     - The former method allowed us to model the game succesfully state-to-state without requiring complex intermediate computations.
     - However, decoupling turns from 'events' means our model loses the ability to quickly answer some interesting questions about the game which are related to turns: for instance, count the minimum turns a player can take to win.
-2. 'Do-Nothing' moves: Our `move` predicate consideres the change of turn without changing anything else on the board as a valid event. 
+2. **'Do-Nothing' moves**: Our `move` predicate consideres the change of turn without changing anything else on the board as a valid event. 
     - We need this to account for cases mid-game where one player runs out of marbles for their turn before the other player. The other player should be able to continue.
     - However, this also means that depending on the number of `Boards` indicated in the `run` statement, after both players run out of marbles Sterling will generate "padding" `Boards` where nothing happens except the `turn` changing, until the number of `Boards` are met.
     - For this reason, our model can investigae the lower bound of `Board`s required, but not the upper bound.
@@ -83,14 +83,52 @@ This is an example to run a game where each pocket starts with 1 marble, there a
 ```
 run {
     wellformed
-    traces[1]
+    fullGame[1]
 } for exactly 2 Player, exactly 4 Pocket, 7 Board for {bnext is linear}
 ```
 - The `Int` parameter in `traces` indicates the number of marbles each pocket will start with.
 - The number of `Pocket`s must be even to satisfy the constraint that each player has the same number of pockets. 
-- `Board` must be sufficiently large relative to the number of pockets and number of marbles for there to be a final state (where both players run out of marbles). Since `traces` requires a final state, the model will return `unsat` if there are insufficient `Board`.
+- `Board` must be sufficiently large relative to the number of pockets and number of marbles for there to be a final state (where both players run out of marbles). Since `traces` requires a final state, the model will return `unsat` if there are not enough `Board`s.
 
-### Running The Model
-We use the default Sterling visualizer. It is easiest to view by `Add Time Projection` > `Board`, and toggle between `Board`s to see where marbles are taken and transferred. One can trace the correct flow of marbles by toggling next/previous between Boards. 
+### Understanding the Visualization
+We use the default Sterling visualizer. It is easiest to view using `Add Time Projection` > `Board`. You should toggle between `Board`s to see where marbles are taken and transferred.
+- Generally, the pattern will be that one Pocket containing `n` marbles will be zero'd out and the next `n` successive pockets will be incremented by 1. 
+- In a case where a pocket out-of-order suddenly gains a lot of marbles, this pocket should be the mancala. This event means the next pocket in-sequence was empty, so that opposite pocket and marble-in-hand are transfered to the player's mancala.
 - The visualizer does not show the `turn` and `hand` fields of `Board`, which can be accessed through the evaluator. It may be necessary to check these values to verify that it is the correct behavior.
-- Generally, the pattern will be that one Pocket will be zero'd out and the next `n` successive pockets will be incremented by 1. In a case where a pocket out-of-order suddenly gains a lot of marbles, this pocket should be the mancala: this event means the next pocket was empty, so that opposite pocket and marble-in-hand are transfered to the player's mancala.
+
+### Testing
+We do extensive unit-testing of our `init`, `move`, `wellformedPockets` and `wellformedBoard` predicates since they are most important in constraining the structure of the game. 
+
+We tried doing induction testing using an additional board-specific `wellformed` predicate, like so:
+```
+pred wellformedBoard[b:Board] {
+    some b.turn
+    b.hand >= 0
+
+    all pock : Pocket | {
+        -- No negative marbles
+        b.marbles[pock] >= 0
+    }
+}
+
+test expect{}
+    induction: {
+        some b1, b2: Board{
+            wellformedPockets
+            wellformedBoard[b1]
+            b2 = b1.bnext
+            move[b1, b2]
+            not wellformedBoard[b2]
+        }
+    } for exactly 2 Player, exactly 6 Pocket, 2 Board, 4 Int for {bnext is linear} is unsat
+}
+ ```
+ However, this caused Forge to just give us cases that crossed the integer bitwidth. Since we require non-negative marbles for all pockets to be a wellformed Board, Forge generated cases where an increment to a pocket with 7 marbles in `b1` caused the pocket to have -8 marbles in `b2`.
+
+
+For the rest, we do some `testExpects` to experiment with some properties of Mancala. As the game is completely deterministic based on the number of pockets, marbles and the choices of pockets, there are surely minimum and maximum bounds for the earliest and latest the game can end. For instance, we learn that:
+- If you are committed to not triggering a 'stealing' event in your game, your game's maximum bound of number of increases by almost 100% (see `gameMustEndWithStealingMinBound` and `gameMustEndWithoutStealingMinBound`).
+- If you play a game with just two pockets (and two mancalas), you can't **not** end the game by 6 Boards (see: `fourPocketGameMaxBound`).
+
+### Collaborators
+None

@@ -23,7 +23,19 @@ abstract sig Player{}
 one sig Player1,Player2 extends Player{}
 
 
-pred wellformed {
+pred wellformedBoards {
+    all b: Board | {
+        -- Sig already constrains that it's someone's turn
+        b.hand >= 0
+
+        all pock : Pocket | {
+            -- No negative marbles
+            b.marbles[pock] >= 0
+        }
+    }
+}
+
+pred wellformedPockets {
     all disj p1 : Player, p2 : Player | {
         -- Each player has the same number of pockets
         #{pock : Pocket | pock.side = p1} = #{pock : Pocket | pock.side = p2}
@@ -35,38 +47,37 @@ pred wellformed {
         }
     }
 
-    all b: Board | {
-        -- It's someone's turn
-        some b.turn
-        b.hand >= 0
-
-        all pock : Pocket | {
-            -- No negative marbles
-            b.marbles[pock] >= 0
-
-            -- Set the right player sides and pocket opposites
-            {pock.mancala = none} => { // if not a mancala
-                {pock.next.mancala = none} => pock.opposite = pock.next.opposite.next else pock.opposite = pock.next.next
-                pock.next.side = pock.side
-                pock.opposite != pock
-                pock.opposite.opposite = pock
-            } else { // if a mancala
-                no pock.opposite
-                pock.mancala = pock.side
-                pock.next.side != pock.side
-            }
-
-            -- Arrange all pockets in a cycle
-            pock.next != pock
-            all other_pock: Pocket | {
-                reachable[other_pock, pock, next]
-                reachable[pock, pock, next]
-            }
-
+    all pock : Pocket | {
+        -- Set the right player sides and pocket opposites
+        {pock.mancala = none} => { // if not a mancala
+            {pock.next.mancala = none} => pock.opposite = pock.next.opposite.next else pock.opposite = pock.next.next
+            pock.next.side = pock.side
+            pock.opposite != pock
+            pock.opposite.opposite = pock
+        } else { 
+            -- If a mancala: 
+            -- the pocket after the mancala should change sides
+            no pock.opposite
+            pock.mancala = pock.side
+            pock.next.side != pock.side
         }
+
+        -- All pockets arranged in a cycle
+        pock.next != pock
+        all other_pock: Pocket | {
+            reachable[other_pock, pock, next]
+            reachable[pock, pock, next]
+        }
+
     }
 
 }
+
+pred wellformed{
+    wellformedBoards
+    wellformedPockets
+}
+
 
 pred init[b: Board, i: Int] {
     -- Start with player 1
@@ -74,7 +85,7 @@ pred init[b: Board, i: Int] {
         b.turn = p
     }
 
-    -- no Prev
+    -- Board has no previous
     no bo: Board | {
         bo.bnext = b
     }
@@ -82,7 +93,7 @@ pred init[b: Board, i: Int] {
     b.bnext != none
     b.lastPocket = none
 
-    -- Place marbles
+    -- Place marbles: 0 in hand and same in pockets
     b.hand = 0
     all pock : Pocket | {
         pock.mancala = none => b.marbles[pock] = i else b.marbles[pock] = 0
@@ -96,7 +107,7 @@ pred final[b: Board] {
     -- No marbles left in hand
     b.hand = 0
 
-    -- One player can no longer play
+    -- All players can no longer play
     all p : Player | {
         all pock : Pocket | {
             {pock.side = p and pock.mancala = none} => b.marbles[pock] = 0
@@ -126,7 +137,6 @@ pred otherPockUnchanged[p: Pocket, pre: Board, post:Board]{
 }
 
 pred move [pre: Board, post: Board] {
-
     {pre.hand = 0} => {
         playerNoMarbles[pre] => {
             changeTurnKeepBoard[pre, post]
@@ -197,22 +207,43 @@ pred move [pre: Board, post: Board] {
     }
 }
 
-pred traces[i: Int] {
-    -- Exists a first and last
-    some disj first, last : Board | {
-        init[first, i]
-        final[last]
-        reachable[last, first, bnext]
+pred stealingHappened {
+    some b1, b2: Board | {
+        b1.bnext = b2
+        some m : Pocket | {
+            m.mancala != none
+            subtract[b2.marbles[m], b1.marbles[m]] > 1
+        }
     }
+}
 
+pred reachableEnd {
+    one b: Board | {
+        final[b]
+    }
+}
+
+pred trace[i: Int] {
+    -- Exists a first
+    one first: Board | {
+        init[first, i]
+        all b: Board | {
+            b != first => reachable[b, first, bnext]
+        }
+    }
     -- Each board is move-able to its next board
     all b:Board | {
         some b.bnext => move[b, b.bnext]
     }
 }
 
+pred fullGame[i: Int] {
+    trace[i]
+    reachableEnd
+}
+
 
 run {
     wellformed
-    traces[1]
+    fullGame[1]
 } for exactly 2 Player, exactly 4 Pocket, 7 Board for {bnext is linear}
