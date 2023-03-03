@@ -1,5 +1,4 @@
 # Curiosity Modeling: Mancala
-Alyssa Loo & Mathew Boranian
 ## About the Game
 ![](https://www.thesprucecrafts.com/thmb/yA6Lp0LcwqefQrJiQtNNVZTwIco=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/mancala-411837_hero_2888-8bef0fd76a324c86b61325556710d89f.jpg)
 
@@ -129,6 +128,3 @@ test expect{}
 For the rest, we do some `testExpects` to experiment with some properties of Mancala. As the game is completely deterministic based on the number of pockets, marbles and the choices of pockets, there are surely minimum and maximum bounds for the earliest and latest the game can end. For instance, we learn that:
 - If you are committed to not triggering a 'stealing' event in your game, your game's maximum bound of number of increases by almost 100% (see `gameMustEndWithStealingMinBound` and `gameMustEndWithoutStealingMinBound`).
 - If you play a game with just two pockets (and two mancalas), you can't **not** end the game by 6 Boards (see: `fourPocketGameMaxBound`).
-
-### Collaborators
-None
