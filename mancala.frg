@@ -19,9 +19,7 @@ sig Pocket{
 
 abstract sig Player{}
 
-
 one sig Player1,Player2 extends Player{}
-
 
 pred wellformedBoards {
     all b: Board | {
@@ -93,7 +91,7 @@ pred init[b: Board, i: Int] {
     b.bnext != none
     b.lastPocket = none
 
-    -- Place marbles: 0 in hand and same in pockets
+    -- Place marbles. 0 in hand and same in pockets
     b.hand = 0
     all pock : Pocket | {
         pock.mancala = none => b.marbles[pock] = i else b.marbles[pock] = 0
@@ -116,12 +114,14 @@ pred final[b: Board] {
 }
 
 pred playerNoMarbles[b: Board]{
+    -- Player-in-turn has no more marbles in play on current board
     all pock: Pocket | {
             {pock.side = b.turn and pock.mancala = none} => b.marbles[pock] = 0
         }
 }
 
 pred changeTurnKeepBoard[pre: Board, post: Board]{
+    -- Ensure all pockets stay the same and only turn changes
     post.turn != pre.turn
     post.hand = pre.hand
     -- No pockets change
@@ -131,16 +131,22 @@ pred changeTurnKeepBoard[pre: Board, post: Board]{
 }
 
 pred otherPockUnchanged[p: Pocket, pre: Board, post:Board]{
+    -- Apart from the pocket p, all other pockets are the same between pre and post
     all otherP: Pocket | {
         p != otherP => pre.marbles[otherP] = post.marbles[otherP]
     }
 }
 
 pred move [pre: Board, post: Board] {
+    -- Check for a valid move between pre and post Boards
+
+    -- No marbles in hand
     {pre.hand = 0} => {
         playerNoMarbles[pre] => {
-            changeTurnKeepBoard[pre, post]
+            -- Player has no more marbles in play, forfeit turn
+            changeTurnKeepBoard[pre, post] 
         } else {
+            -- Start turn by taking marbles from a pocket
             some usedPock : Pocket | {
                 -- GUARD
                 usedPock.side = pre.turn // on player's side
@@ -157,12 +163,14 @@ pred move [pre: Board, post: Board] {
             }
         } 
     } 
+    -- Marbles in hand
     else {
-        post.hand = subtract[pre.hand, 1] // Changed from pre.hand - 1
+        -- Drop one marble from hand
+        post.hand = subtract[pre.hand, 1]
 
         one pock: Pocket | {
             pock = pre.lastPocket.next
-
+            -- About to finish all marbles
             {post.hand = 0} =>{ // have spent all marbles
                 pock.mancala = none => { // finished in pocket
                     post.turn != pre.turn  // change turn
@@ -196,7 +204,8 @@ pred move [pre: Board, post: Board] {
                         post.turn != pre.turn // change turn if not
                     }
                 }
-            } else { // still have marbles in hand
+            } -- Continue placing marbles
+            else { // still have marbles in hand
                 post.marbles[pock] = add[pre.marbles[pock], 1]
                 post.turn = pre.turn
                 post.lastPocket = pock
