@@ -1,4 +1,5 @@
 # Curiosity Modeling: Mancala
+Final Project for CS1710
 ## About the Game
 ![](https://www.thesprucecrafts.com/thmb/yA6Lp0LcwqefQrJiQtNNVZTwIco=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/mancala-411837_hero_2888-8bef0fd76a324c86b61325556710d89f.jpg)
 
